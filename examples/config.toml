@@ -1,0 +1,77 @@
+# ZeroFetch Configuration File (TOML format)
+# Location: ~/.config/zerofetch/config.toml
+
+[general]
+# Separator between key and value
+separator = ":"
+
+# Compact mode - minimal spacing
+compact = false
+
+# Output format: "default", "json", "yaml", "toml", "plain"
+format = "default"
+
+[logo]
+# Logo type: "auto", "ascii", "kitty", "iterm", "none"
+logo_type = "auto"
+
+# Specific logo name (e.g., "ubuntu", "arch", "fedora")
+# logo_name = "ubuntu"
+
+# Path to custom logo file
+# logo_file = "~/.config/zerofetch/custom-logo.txt"
+
+# Remote logo URL
+# logo_url = "https://example.com/logo.png"
+
+# Padding between logo and info (spaces)
+padding = 2
+
+# Logo dimensions (for image scaling)
+# width = 40
+# height = 20
+
+# Override logo colors
+# color_override = "blue"
+
+[display]
+# Show color palette at the bottom
+show_colors = false
+
+# Color scheme
+color_scheme = "default"
+
+# Disable all colors
+no_color = false
+
+[modules]
+# Order of modules to display
+order = [
+  "os",
+  "host",
+  "kernel",
+  "uptime",
+  "packages",
+  "shell",
+  "de",
+  "wm",
+  "terminal",
+  "cpu",
+  "gpu",
+  "memory",
+  "disk",
+  "battery",
+  "network"
+]
+
+# Explicitly enabled modules (empty = all enabled)
+enabled = []
+
+# Disabled modules
+disabled = []
+
+[colors]
+title = "cyan"
+key = "blue"
+value = "white"
+separator = "gray"

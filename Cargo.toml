@@ -1,0 +1,75 @@
+[package]
+name = "zerofetch"
+version = "0.1.0"
+edition = "2021"
+authors = ["ZeroFetch Contributors"]
+description = "A high-performance, modular, cross-platform system information CLI tool"
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/ofcyouritachii/zerofetch"
+repository = "https://github.com/ofcyouritachii/zerofetch"
+keywords = ["system", "cli", "fetch", "neofetch", "fastfetch"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+# CLI & argument parsing
+clap = { version = "4.5", features = ["derive", "color", "suggestions"] }
+
+# Configuration parsing
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+json5 = "0.4"  # For JSONC support (JSON with comments)
+
+# System information
+sysinfo = "0.31"
+which = "6.0"
+
+# Cross-platform utilities
+whoami = "1.5"
+hostname = "0.4"
+
+# Networking
+local-ip-address = "0.6"
+
+# Colors and terminal output
+colored = "2.1"
+termcolor = "1.4"
+ansi_term = "0.12"
+
+# Image protocols (Kitty, iTerm)
+base64 = "0.22"
+image = "0.25"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# File system & paths
+dirs = "5.0"
+walkdir = "2.5"
+
+# Platform-specific dependencies
+[target.'cfg(target_os = "linux")'.dependencies]
+regex = "1.10"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.9"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["winuser", "sysinfoapi"] }
+wmi = "0.14"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[[bin]]
+name = "zerofetch"
+path = "src/main.rs"
