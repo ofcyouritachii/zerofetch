@@ -32,7 +32,7 @@ pub struct SystemInfo {
 }
 
 impl SystemInfo {
-    pub fn new(config: &Config) -> Result<Self> {
+    pub fn new(_config: &Config) -> Result<Self> {
         let mut modules: HashMap<String, Box<dyn Module>> = HashMap::new();
 
         // Register all available modules

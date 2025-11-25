@@ -3,6 +3,7 @@ use crate::logo::LogoEngine;
 use crate::modules::SystemInfo;
 use anyhow::Result;
 use colored::*;
+use std::collections::HashMap;
 
 pub fn render(system_info: &SystemInfo, config: &Config) -> Result<()> {
     // Handle special output formats
@@ -77,8 +78,6 @@ pub fn render(system_info: &SystemInfo, config: &Config) -> Result<()> {
 }
 
 fn render_json(system_info: &SystemInfo, config: &Config) -> Result<()> {
-    use std::collections::HashMap;
-    
     let modules = system_info.get_ordered_modules(config);
     let mut data = HashMap::new();
     
@@ -93,8 +92,6 @@ fn render_json(system_info: &SystemInfo, config: &Config) -> Result<()> {
 }
 
 fn render_yaml(system_info: &SystemInfo, config: &Config) -> Result<()> {
-    use std::collections::HashMap;
-    
     let modules = system_info.get_ordered_modules(config);
     let mut data = HashMap::new();
     
@@ -110,10 +107,8 @@ fn render_yaml(system_info: &SystemInfo, config: &Config) -> Result<()> {
 
 fn render_toml(system_info: &SystemInfo, config: &Config) -> Result<()> {
     use std::collections::HashMap;
-    
+fn render_toml(system_info: &SystemInfo, config: &Config) -> Result<()> {
     let modules = system_info.get_ordered_modules(config);
-    let mut data = HashMap::new();
-    
     for module in modules {
         if let Ok(value) = module.value() {
             data.insert(module.name().to_string(), value);

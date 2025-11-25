@@ -8,11 +8,7 @@ pub struct KernelModule {
 
 impl KernelModule {
     pub fn new() -> Result<Self> {
-        let mut sys = System::new_all();
-        sys.refresh_all();
-        
-        let value = sys
-            .kernel_version()
+        let value = System::kernel_version()
             .unwrap_or_else(|| "Unknown".to_string());
         
         Ok(Self { value })
