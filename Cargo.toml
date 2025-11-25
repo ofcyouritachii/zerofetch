@@ -3,13 +3,14 @@ name = "zerofetch"
 version = "0.1.0"
 edition = "2021"
 authors = ["ZeroFetch Contributors"]
-description = "A high-performance, modular, cross-platform system information CLI tool"
+description = "A high-performance, modular system information tool for Linux"
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/ofcyouritachii/zerofetch"
 repository = "https://github.com/ofcyouritachii/zerofetch"
-keywords = ["system", "cli", "fetch", "neofetch", "fastfetch"]
+keywords = ["linux", "system-info", "fetch", "neofetch", "fastfetch"]
 categories = ["command-line-utilities"]
+exclude = ["target", ".git", ".github"]
 
 [dependencies]
 # CLI & argument parsing
@@ -50,16 +51,9 @@ thiserror = "1.0"
 dirs = "5.0"
 walkdir = "2.5"
 
-# Platform-specific dependencies
+# Linux-specific dependencies
 [target.'cfg(target_os = "linux")'.dependencies]
 regex = "1.10"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = "0.9"
-
-[target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = ["winuser", "sysinfoapi"] }
-wmi = "0.14"
 
 [dev-dependencies]
 pretty_assertions = "1.4"

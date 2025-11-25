@@ -1,0 +1,27 @@
+Source: zerofetch
+Section: utils
+Priority: optional
+Maintainer: ZeroFetch Contributors <zerofetch@example.com>
+Build-Depends: debhelper-compat (= 13),
+               cargo,
+               rustc (>= 1.70)
+Standards-Version: 4.6.0
+Homepage: https://github.com/ofcyouritachii/zerofetch
+Vcs-Git: https://github.com/ofcyouritachii/zerofetch.git
+Vcs-Browser: https://github.com/ofcyouritachii/zerofetch
+
+Package: zerofetch
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: High-performance system information tool for Linux
+ ZeroFetch is a blazing-fast, modular system information tool written in Rust.
+ It displays comprehensive system information alongside beautiful ASCII art
+ logos with extensive customization options.
+ .
+ Features:
+  * Lightning-fast execution (10-20ms)
+  * 16 built-in information modules
+  * Support for all major Linux distributions
+  * ASCII logos for 15+ distributions
+  * Multiple output formats (JSON, YAML, TOML)
+  * Highly customizable via config files

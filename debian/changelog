@@ -1,0 +1,11 @@
+zerofetch (0.1.0-1) unstable; urgency=medium
+
+  * Initial release
+  * High-performance system information tool for Linux
+  * 16 built-in information modules
+  * Support for major Linux distributions
+  * ASCII logos for 15+ distributions
+  * Multiple output formats (JSON, YAML, TOML)
+  * Configurable via JSONC, YAML, or TOML files
+
+ -- ZeroFetch Contributors <zerofetch@example.com>  Mon, 25 Nov 2025 00:00:00 +0000

@@ -1,0 +1,24 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cargo build --release --locked
+
+override_dh_auto_test:
+	cargo test --release --locked
+
+override_dh_auto_install:
+	install -Dm755 target/release/zerofetch debian/zerofetch/usr/bin/zerofetch
+	install -Dm644 LICENSE debian/zerofetch/usr/share/doc/zerofetch/LICENSE
+	install -Dm644 README.md debian/zerofetch/usr/share/doc/zerofetch/README.md
+	install -Dm644 examples/config.jsonc debian/zerofetch/usr/share/zerofetch/examples/config.jsonc
+	install -Dm644 examples/config.yaml debian/zerofetch/usr/share/zerofetch/examples/config.yaml
+	install -Dm644 examples/config.toml debian/zerofetch/usr/share/zerofetch/examples/config.toml
+
+override_dh_auto_clean:
+	cargo clean
