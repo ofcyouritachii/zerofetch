@@ -1,0 +1,129 @@
+.TH ZEROFETCH 1 "December 2025" "Zerofetch 0.1.0" "User Commands"
+.SH NAME
+zerofetch \- A lightweight system information tool for Linux
+.SH SYNOPSIS
+.B zerofetch
+[\fIOPTIONS\fR]
+.SH DESCRIPTION
+.B zerofetch
+is a command-line system information tool written in bash that displays information about your operating system, software, and hardware in an aesthetic and visually pleasing way.
+.PP
+The overall purpose of Zerofetch is to be used in screenshots of your system. Zerofetch shows the information other people want to see in a clean, colorful format alongside your distribution's ASCII logo.
+.SH OPTIONS
+.TP
+.BR \-\-config " \fIFILE\fR"
+Use a custom configuration file instead of the default (~/.config/zerofetch/config.conf)
+.TP
+.BR \-\-logo " \fIDISTRO\fR"
+Set the ASCII logo to display. Available options include: arch, ubuntu, debian, fedora, gentoo, and more.
+.TP
+.BR \-\-off
+Disable the ASCII logo and display only system information
+.TP
+.BR \-v ", " \-\-version
+Display version information and exit
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit
+.SH CONFIGURATION
+Zerofetch can be configured via the configuration file located at:
+.PP
+.RS
+.I ~/.config/zerofetch/config.conf
+.RE
+.PP
+The configuration file allows you to customize:
+.RS
+.IP \(bu 2
+Which information fields to display
+.IP \(bu 2
+Color schemes and separators
+.IP \(bu 2
+ASCII logo preferences
+.IP \(bu 2
+Output formatting options
+.IP \(bu 2
+Custom information fields
+.RE
+.PP
+If no configuration file exists, Zerofetch will use sensible defaults.
+.SH INFORMATION DISPLAYED
+By default, Zerofetch displays:
+.RS
+.IP \(bu 2
+Operating System name and version
+.IP \(bu 2
+Linux kernel version
+.IP \(bu 2
+System uptime
+.IP \(bu 2
+Package count (with package managers)
+.IP \(bu 2
+Shell type and version
+.IP \(bu 2
+Screen resolution
+.IP \(bu 2
+Desktop Environment / Window Manager
+.IP \(bu 2
+GTK/Qt themes and icons
+.IP \(bu 2
+Terminal emulator
+.IP \(bu 2
+CPU model and specifications
+.IP \(bu 2
+GPU information
+.IP \(bu 2
+Memory usage
+.RE
+.SH EXAMPLES
+.TP
+.B zerofetch
+Display system information with automatic distro detection
+.TP
+.B zerofetch \-\-logo arch
+Display system information with Arch Linux logo
+.TP
+.B zerofetch \-\-off
+Display only text information without ASCII art
+.TP
+.B zerofetch \-\-config ~/.zerofetch.conf
+Use a custom configuration file
+.SH FILES
+.TP
+.I ~/.config/zerofetch/config.conf
+User configuration file
+.TP
+.I /usr/local/bin/zerofetch
+Zerofetch executable (default installation path)
+.SH REQUIREMENTS
+.TP
+.B bash
+Version 3.2 or higher
+.TP
+.B Linux kernel
+Version 2.6 or higher
+.PP
+Additional features may require:
+.RS
+.IP \(bu 2
+xrandr (for screen resolution)
+.IP \(bu 2
+xprop (for window manager detection)
+.IP \(bu 2
+lspci (for GPU information)
+.RE
+.SH BUGS
+Report bugs at: https://github.com/ofcyouritachii/zerofetch/issues
+.SH AUTHOR
+Written by ofcyouritachii
+.SH COPYRIGHT
+Copyright \(co 2025 MIT License
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.SH SEE ALSO
+.BR uname (1),
+.BR lsb_release (1),
+.BR lspci (8)
+.PP
+Project homepage: https://github.com/ofcyouritachii/zerofetch

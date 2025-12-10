@@ -1,0 +1,11 @@
+# Editor files
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.tmp

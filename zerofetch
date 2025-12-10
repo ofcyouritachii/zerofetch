@@ -1,0 +1,1354 @@
+#!/usr/bin/env bash
+# Zerofetch - System Information Tool
+# https://github.com/ofcyouritachii/zerofetch
+
+shopt -s nocasematch
+
+version="0.1.0"
+
+# Default configuration
+print_info() {
+    info title
+    info underline
+
+    info "OS" distro
+    info "Host" host
+    info "Kernel" kernel
+    info "Uptime" uptime
+    info "Packages" packages
+    info "Shell" shell
+    info "Display" display
+    info "DE" de
+    info "WM" wm
+    info "WM Theme" wm_theme
+    info "Theme" theme
+    info "Icons" icons
+    info "Font" font
+    info "Cursor" cursor
+    info "Terminal" term
+    info "Terminal Font" term_font
+    info "CPU" cpu
+    info "GPU" gpu
+    info "RAM" memory
+    info "Swap" swap
+    info "ROM" disk
+    info "Local IP" local_ip
+    info "Battery" battery
+    info "Locale" locale
+
+    info break
+    info cols
+}
+
+c1="\033[0m"
+c2="\033[1m"
+c_red="\033[1;31m"
+c_green="\033[1;32m"
+c_yellow="\033[1;33m"
+c_blue="\033[1;34m"
+c_magenta="\033[1;35m"
+c_cyan="\033[1;36m"
+c_white="\033[1;37m"
+c_gray="\033[0;90m"
+c_label="\033[1;36m"
+c_value="\033[1;37m"
+c_title="\033[1;35m"
+c_separator="\033[0;36m"
+
+ascii_distro="auto"
+ascii_bold="on"
+ascii_colors=(4 6 1 8 8 6)
+image_backend="ascii"
+image_source="auto"
+gap=3
+separator=":"
+color_blocks="on"
+bold="on"
+underline_enabled="on"
+underline_char="─"
+os_arch="on"
+uptime_shorthand="on"
+shell_path="off"
+shell_version="on"
+speed_type="bios_limit"
+cpu_brand="on"
+cpu_speed="on"
+cpu_cores="logical"
+cpu_temp="off"
+gpu_brand="on"
+gpu_type="all"
+memory_percent="off"
+package_managers="on"
+de_version="on"
+disk_show=('/')
+disk_subtitle="mount"
+music_player="auto"
+song_format="%artist% - %album% - %title%"
+song_shorthand="off"
+colors=(distro)
+stdout="off"
+
+# Get script directory
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Config file path
+config_file="${XDG_CONFIG_HOME:-${HOME}/.config}/zerofetch/config"
+
+# Fetch all information (no animation)
+fetch_info() {
+    # Fetch all info directly
+    get_title
+    get_distro
+    get_host
+    get_kernel
+    get_uptime
+    get_packages
+    get_shell
+    get_display
+    get_de
+    get_wm
+    get_wm_theme
+    get_theme
+    get_icons
+    get_font
+    get_cursor
+    get_term
+    get_term_font
+    get_cpu
+    get_gpu
+    get_memory
+    get_swap
+    get_disk
+    get_local_ip
+    get_battery
+    get_locale
+}
+
+# Load configuration
+get_config() {
+    [[ -f "$config_file" ]] && source "$config_file"
+}
+
+# System information functions
+get_title() {
+    user="${USER:-$(whoami)}"
+    hostname="${HOSTNAME:-$(hostname)}"
+    title="${user}@${hostname}"
+}
+
+get_distro() {
+    if [[ -f /etc/os-release ]]; then
+        source /etc/os-release
+        distro="$NAME"
+    elif [[ -f /etc/lsb-release ]]; then
+        source /etc/lsb-release
+        distro="$DISTRIB_DESCRIPTION"
+    else
+        distro="Linux"
+    fi
+    
+    [[ "$os_arch" == "on" ]] && distro+=" $(uname -m)"
+}
+
+get_kernel() {
+    kernel="Linux $(uname -r)"
+}
+
+get_uptime() {
+    if [[ -r /proc/uptime ]]; then
+        s=$(< /proc/uptime)
+        s=${s/.*}
+        d="$((s / 60 / 60 / 24))"
+        h="$((s / 60 / 60 % 24))"
+        m="$((s / 60 % 60))"
+        
+        uptime=""
+        [[ $d -gt 0 ]] && uptime="${d} day"
+        [[ $d -gt 1 ]] && uptime="${uptime}s"
+        [[ $d -gt 0 ]] && uptime="${uptime}, "
+        
+        [[ $h -gt 0 || $d -gt 0 ]] && uptime="${uptime}${h} hour"
+        [[ $h -gt 1 || $h -eq 0 ]] && [[ $h -gt 0 || $d -gt 0 ]] && uptime="${uptime}s"
+        [[ $h -gt 0 || $d -gt 0 ]] && uptime="${uptime}, "
+        
+        uptime="${uptime}${m} min"
+        [[ $m -gt 1 || $m -eq 0 ]] && uptime="${uptime}s"
+        
+        # Clean up extra commas
+        uptime="${uptime%, }"
+    fi
+}
+
+get_packages() {
+    packages="0"
+    managers=""
+    has() { type -p "$1" >/dev/null 2>&1; }
+    
+    if has dpkg; then
+        packages="$((packages + $(dpkg -l | grep -c '^ii')))"
+        managers+="dpkg, "
+    fi
+    
+    if has rpm; then
+        packages="$((packages + $(rpm -qa | wc -l)))"
+        managers+="rpm, "
+    fi
+    
+    if has pacman; then
+        packages="$((packages + $(pacman -Qq | wc -l)))"
+        managers+="pacman, "
+    fi
+    
+    if has emerge; then
+        packages="$((packages + $(ls -d /var/db/pkg/*/* 2>/dev/null | wc -l)))"
+        managers+="emerge, "
+    fi
+    
+    if has xbps-query; then
+        packages="$((packages + $(xbps-query -l | wc -l)))"
+        managers+="xbps, "
+    fi
+    
+    if has flatpak; then
+        packages="$((packages + $(flatpak list | wc -l)))"
+        managers+="flatpak, "
+    fi
+    
+    if has snap; then
+        packages="$((packages + $(snap list | tail -n +2 | wc -l)))"
+        managers+="snap, "
+    fi
+    
+    [[ "$package_managers" == "on" ]] && packages+=" (${managers%, })"
+}
+
+get_shell() {
+    shell="${SHELL##*/}"
+    
+    [[ "$shell_path" == "on" ]] && shell="$SHELL"
+    
+    [[ "$shell_version" == "on" ]] && {
+        case "$shell" in
+            bash) shell+=" ${BASH_VERSION/-*}" ;;
+            zsh) shell+=" $(zsh --version | awk '{print $2}')" ;;
+            fish) shell+=" $(fish --version | awk '{print $3}')" ;;
+        esac
+    }
+}
+
+get_resolution() {
+    if type -p xrandr >/dev/null 2>&1 && [[ -n "$DISPLAY" ]]; then
+        resolution="$(xrandr --nograb --current 2>/dev/null | awk '/\*/ && /^[[:space:]]*[0-9]/ {printf $1 " "}' | sed 's/ $//')"
+    fi
+    
+    # Fallback to tty resolution
+    if [[ -z "$resolution" ]] && [[ -f /sys/class/graphics/fb0/virtual_size ]]; then
+        resolution="$(cat /sys/class/graphics/fb0/virtual_size 2>/dev/null | sed 's/,/x/')"
+    fi
+}
+
+get_de() {
+    de="$XDG_CURRENT_DESKTOP"
+    [[ -z "$de" ]] && de="$DESKTOP_SESSION"
+    
+    # Check common DE processes
+    if [[ -z "$de" ]]; then
+        if pgrep -x "gnome-shell" >/dev/null; then de="GNOME"
+        elif pgrep -x "plasmashell" >/dev/null; then de="KDE Plasma"
+        elif pgrep -x "xfce4-session" >/dev/null; then de="Xfce"
+        elif pgrep -x "mate-session" >/dev/null; then de="MATE"
+        elif pgrep -x "cinnamon" >/dev/null; then de="Cinnamon"
+        elif pgrep -x "lxsession" >/dev/null; then de="LXDE"
+        elif pgrep -x "lxqt-session" >/dev/null; then de="LXQt"
+        fi
+    fi
+}
+
+get_wm() {
+    if [[ -n "$DISPLAY" ]] && type -p xprop >/dev/null 2>&1; then
+        wm="$(xprop -root -notype _NET_SUPPORTING_WM_CHECK 2>/dev/null)"
+        wm="${wm##* }"
+        wm="$(xprop -id "$wm" -notype -len 100 -f _NET_WM_NAME 8t 2>/dev/null)"
+        wm="${wm/*_NET_WM_NAME = }"
+        wm="${wm/\"}"
+        wm="${wm/\"*}"
+    fi
+    
+    # Check for common WMs via process list
+    if [[ -z "$wm" ]]; then
+        if pgrep -x "i3" >/dev/null; then wm="i3"
+        elif pgrep -x "bspwm" >/dev/null; then wm="bspwm"
+        elif pgrep -x "awesome" >/dev/null; then wm="awesome"
+        elif pgrep -x "dwm" >/dev/null; then wm="dwm"
+        elif pgrep -x "openbox" >/dev/null; then wm="Openbox"
+        elif pgrep -x "fluxbox" >/dev/null; then wm="Fluxbox"
+        elif pgrep -x "herbstluftwm" >/dev/null; then wm="herbstluftwm"
+        elif pgrep -x "xmonad" >/dev/null; then wm="xmonad"
+        elif pgrep -x "sway" >/dev/null; then wm="Sway"
+        elif pgrep -x "hyprland" >/dev/null; then wm="Hyprland"
+        fi
+    fi
+}
+
+get_wm_theme() {
+    [[ -z "$wm" ]] && return
+    
+    if type -p gsettings >/dev/null 2>&1; then
+        wm_theme="$(gsettings get org.gnome.desktop.wm.preferences theme 2>/dev/null | tr -d "'")"
+    fi
+}
+
+get_theme() {
+    if [[ -f ~/.config/gtk-3.0/settings.ini ]]; then
+        theme="$(awk -F= '/gtk-theme-name/ {print $2}' ~/.config/gtk-3.0/settings.ini | tr -d ' ')"
+    elif [[ -f ~/.gtkrc-2.0 ]]; then
+        theme="$(awk -F'"' '/gtk-theme-name/ {print $2}' ~/.gtkrc-2.0)"
+    fi
+}
+
+get_icons() {
+    if [[ -f ~/.config/gtk-3.0/settings.ini ]]; then
+        icons="$(awk -F= '/gtk-icon-theme-name/ {print $2}' ~/.config/gtk-3.0/settings.ini | tr -d ' ')"
+    elif [[ -f ~/.gtkrc-2.0 ]]; then
+        icons="$(awk -F'"' '/gtk-icon-theme-name/ {print $2}' ~/.gtkrc-2.0)"
+    fi
+}
+
+get_term() {
+    term="${TERM_PROGRAM:-$TERM}"
+}
+
+get_cpu() {
+    cpu="$(awk -F': ' '/model name/ {print $2; exit}' /proc/cpuinfo)"
+    
+    if [[ -z "$cpu" ]]; then
+        return
+    fi
+    
+    cpu="${cpu//  / }"
+    cpu="$(echo "$cpu" | sed 's/ CPU//' | sed 's/ Processor//' | xargs)"
+    
+    [[ "$cpu_speed" == "on" ]] && {
+        speed="$(awk -F': ' '/cpu MHz/ {print $2; exit}' /proc/cpuinfo)"
+        if [[ -n "$speed" ]]; then
+            speed="$(awk "BEGIN {printf \"%.2f\", $speed / 1000}")"
+            cpu="$cpu @ ${speed} GHz"
+        fi
+    }
+    
+    [[ "$cpu_cores" != "off" ]] && {
+        case "$cpu_cores" in
+            logical) cores="$(grep -c "^processor" /proc/cpuinfo)" ;;
+            physical) cores="$(grep "^cpu cores" /proc/cpuinfo | tail -1 | awk '{print $4}')" ;;
+        esac
+        [[ -n "$cores" ]] && cpu="$cpu ($cores)"
+    }
+}
+
+get_gpu() {
+    if type -p lspci >/dev/null 2>&1; then
+        gpu="$(lspci 2>/dev/null | grep -E "VGA|3D|Display" | sed 's/.*: //' | head -1)"
+        gpu="${gpu// Corporation/}"
+        gpu="${gpu// Inc./}"
+        gpu="${gpu// \[AMD\/ATI\]/}"
+    fi
+    
+    if [[ -z "$gpu" ]] && [[ -d /sys/class/drm ]]; then
+        for card in /sys/class/drm/card*/device; do
+            if [[ -f "$card/vendor" ]] && [[ -f "$card/device" ]]; then
+                vendor="$(< "$card/vendor")"
+                device="$(< "$card/device")"
+                gpu="${vendor} ${device}"
+                break
+            fi
+        done
+    fi
+}
+
+get_memory() {
+    mem_used="$(awk '/MemTotal/ {total=$2} /MemAvailable/ {available=$2} END {printf "%.2f", (total-available)/1024/1024}' /proc/meminfo)"
+    mem_total="$(awk '/MemTotal/ {printf "%.2f", $2/1024/1024}' /proc/meminfo)"
+    percent="$(awk '/MemTotal/ {total=$2} /MemAvailable/ {available=$2} END {printf "%.0f", ((total-available)/total)*100}' /proc/meminfo)"
+    
+    memory="${mem_used} GiB / ${mem_total} GiB (${percent}%)"
+}
+
+get_host() {
+    # Try multiple sources for host info
+    if [[ -f /sys/devices/virtual/dmi/id/product_name ]]; then
+        host="$(< /sys/devices/virtual/dmi/id/product_name)"
+    elif [[ -f /sys/firmware/devicetree/base/model ]]; then
+        host="$(< /sys/firmware/devicetree/base/model)"
+    fi
+get_host() {
+    if [[ -f /sys/devices/virtual/dmi/id/product_name ]]; then
+        host="$(< /sys/devices/virtual/dmi/id/product_name)"
+    elif [[ -f /sys/firmware/devicetree/base/model ]]; then
+        host="$(< /sys/firmware/devicetree/base/model)"
+    fi
+    
+    if [[ -f /sys/devices/virtual/dmi/id/product_version ]] && [[ -n "$host" ]]; then
+    
+    if type -p xrandr >/dev/null 2>&1 && [[ -n "$DISPLAY" ]]; then
+        while IFS= read -r line; do
+            if [[ "$line" =~ ([0-9]+x[0-9]+).+([0-9]+\.[0-9]+)\*\+ ]]; then
+                res="${BASH_REMATCH[1]}"
+                refresh="${BASH_REMATCH[2]}"
+                # Try to get display name
+                name="$(echo "$line" | awk '{print $1}')"
+                display+="${name}: ${res}, ${refresh} Hz; "
+            fi
+        done < <(xrandr --nograb --current 2>/dev/null | grep '\*')
+        display="${display%; }"
+    fi
+}
+
+get_font() {
+    if [[ -f ~/.config/gtk-3.0/settings.ini ]]; then
+        font="$(awk -F= '/gtk-font-name/ {print $2}' ~/.config/gtk-3.0/settings.ini | tr -d '"' | xargs)"
+    elif [[ -f ~/.gtkrc-2.0 ]]; then
+        font="$(awk -F'"' '/gtk-font-name/ {print $2}' ~/.gtkrc-2.0)"
+    fi
+}
+
+get_cursor() {
+    if [[ -f ~/.config/gtk-3.0/settings.ini ]]; then
+        cursor="$(awk -F= '/gtk-cursor-theme-name/ {print $2}' ~/.config/gtk-3.0/settings.ini | tr -d '"' | xargs)"
+        cursor_size="$(awk -F= '/gtk-cursor-theme-size/ {print $2}' ~/.config/gtk-3.0/settings.ini | xargs)"
+        [[ -n "$cursor_size" ]] && cursor+=" (${cursor_size}px)"
+    elif [[ -f ~/.gtkrc-2.0 ]]; then
+        cursor="$(awk -F'"' '/gtk-cursor-theme-name/ {print $2}' ~/.gtkrc-2.0)"
+    fi
+}
+
+get_term_font() {
+    case "${TERM_PROGRAM:-$TERM}" in
+        kitty*)
+            if [[ -f ~/.config/kitty/kitty.conf ]]; then
+                term_font="$(awk '/^font_family/ {$1=""; print substr($0,2)}' ~/.config/kitty/kitty.conf | xargs)"
+            fi
+            ;;
+        alacritty*)
+            if [[ -f ~/.config/alacritty/alacritty.yml ]]; then
+                term_font="$(awk '/family:/ {print $2; exit}' ~/.config/alacritty/alacritty.yml)"
+            elif [[ -f ~/.config/alacritty/alacritty.toml ]]; then
+                term_font="$(awk -F'"' '/family =/ {print $2; exit}' ~/.config/alacritty/alacritty.toml)"
+            fi
+            ;;
+        gnome-terminal*|vte*)
+            if type -p gsettings >/dev/null 2>&1; then
+                term_font="$(gsettings get org.gnome.desktop.interface monospace-font-name 2>/dev/null | tr -d "'")"
+            fi
+            ;;
+    esac
+}
+
+get_swap() {
+    swap_used="$(awk '/SwapTotal/ {total=$2} /SwapFree/ {free=$2} END {if(total>0) printf "%.2f", (total-free)/1024/1024; else print "0"}' /proc/meminfo)"
+    swap_total="$(awk '/SwapTotal/ {if($2>0) printf "%.2f", $2/1024/1024; else print "0"}' /proc/meminfo)"
+    
+    # Only set swap if swap partition exists
+    if [[ "$swap_total" != "0" ]] && (( $(echo "$swap_total > 0" | bc -l 2>/dev/null || echo 0) )); then
+        swap_percent="$(awk '/SwapTotal/ {total=$2} /SwapFree/ {free=$2} END {if(total>0) printf "%.0f", ((total-free)/total)*100; else print "0"}' /proc/meminfo)"
+        swap="${swap_used} GiB / ${swap_total} GiB (${swap_percent}%)"
+    fi
+}
+
+get_disk() {
+    disk_info="$(df -h / 2>/dev/null | awk 'NR==2 {print $3 " / " $2 " (" $5 ")"}')"
+    disk_type="$(df -T / 2>/dev/null | awk 'NR==2 {print $2}')"
+    
+    if [[ -n "$disk_info" ]]; then
+        disk="$disk_info"
+        [[ -n "$disk_type" ]] && disk+=" - $disk_type"
+    fi
+}
+
+get_local_ip() {
+    # Get primary network interface IP with interface name
+    local_ip="$(ip -4 -br addr show 2>/dev/null | awk '/UP/ {gsub(/\/.*/, "", $3); print $1 ": " $3; exit}')"
+    
+    # Fallback to hostname command
+    if [[ -z "$local_ip" ]]; then
+        ip_addr="$(hostname -I 2>/dev/null | awk '{print $1}')"
+        [[ -n "$ip_addr" ]] && local_ip="$ip_addr"
+    fi
+}
+
+get_battery() {
+    battery=""
+    
+    for bat in /sys/class/power_supply/BAT*/capacity; do
+        if [[ -f "$bat" ]]; then
+            capacity="$(< "$bat")"
+            bat_name="$(basename "$(dirname "$bat")")"
+            status_file="$(dirname "$bat")/status"
+            
+            if [[ -f "$status_file" ]]; then
+                status="$(< "$status_file")"
+                case "$status" in
+                    Charging) status_text="[Charging]" ;;
+                    Discharging) status_text="[Discharging]" ;;
+                    Full) status_text="[Full]" ;;
+                    *) status_text="[AC Connected]" ;;
+                esac
+            fi
+            
+            battery="${bat_name}: ${capacity}% ${status_text}"
+            break
+        fi
+    done
+}
+
+get_locale() {
+    if [[ -n "$LANG" ]]; then
+        locale="$LANG"
+    elif [[ -n "$LC_ALL" ]]; then
+        locale="$LC_ALL"
+    fi
+}
+
+get_ascii() {
+    if [[ "$ascii_distro" == "auto" ]]; then
+        if [[ -f /etc/os-release ]]; then
+            source /etc/os-release
+            ascii_distro="${ID:-linux}"
+        else
+            ascii_distro="linux"
+        fi
+    fi
+    
+    set_colors
+    ascii_data="$(get_distro_ascii)"
+}
+
+set_colors() {
+    case "$ascii_distro" in
+        arch*|artix*|manjaro*|endeavour*)
+            ascii_colors=(6 4 1 8 8 6)
+            ;;
+        ubuntu*|pop*|kubuntu*|xubuntu*|lubuntu*)
+            ascii_colors=(1 7 3 8 8 1)
+            ;;
+        mint*|lmde*)
+            ascii_colors=(2 7 1 8 8 2)
+            ;;
+        debian*|kali*|parrot*)
+            ascii_colors=(1 7 3 8 8 1)
+            ;;
+        fedora*|rhel*|centos*|rocky*|alma*)
+            ascii_colors=(4 7 1 8 8 4)
+            ;;
+        gentoo*)
+            ascii_colors=(5 7 1 8 8 5)
+            ;;
+        opensuse*|suse*)
+            ascii_colors=(2 7 1 8 8 2)
+            ;;
+        void*)
+            ascii_colors=(2 7 1 8 8 2)
+            ;;
+        alpine*)
+            ascii_colors=(4 7 1 8 8 4)
+            ;;
+        nixos*)
+            ascii_colors=(6 4 1 8 8 6)
+            ;;
+        mx*|antix*)
+            ascii_colors=(4 7 1 8 8 4)
+            ;;
+        solus*)
+            ascii_colors=(4 7 1 8 8 4)
+            ;;
+        elementary*)
+            ascii_colors=(4 7 1 8 8 4)
+            ;;
+        zorin*)
+            ascii_colors=(4 7 1 8 8 4)
+            ;;
+        *)
+            ascii_colors=(4 6 1 8 8 6)
+            ;;
+    esac
+}
+
+get_distro_ascii() {
+    case "$ascii_distro" in
+        arch*|artix*)
+            cat << 'EOF'
+${c1}                   -`
+                  .o+`
+                 `ooo/
+                `+oooo:
+               `+oooooo:
+               -+oooooo+:
+             `/:-:++oooo+:
+            `/++++/+++++++:
+           `/++++++++++++++:
+          `/+++ooooooooooooo/`
+         ./ooosssso++osssssso+`
+        .oossssso-````/ossssss+`
+       -osssssso.      :ssssssso.
+      :osssssss/        osssso+++.
+     /ossssssss/        +ssssooo/-
+   `/ossssso+/:-        -:/+osssso+-
+  `+sso+:-`                 `.-/+oso:
+ `++:.                           `-/+/
+ .`                                 `/
+EOF
+            ;;
+        ubuntu*|pop*)
+            cat << 'EOF'
+${c1}            .-/+oossssoo+/-.
+        `:+ssssssssssssssssss+:`
+      -+ssssssssssssssssssyyssss+-
+    .ossssssssssssssssssd${c2}MMM${c1}ysssso.
+   /sssssssssss${c2}hdmmNNmmyNMMMMh${c1}ssssss/
+  +sssssssss${c2}hm${c1}yd${c2}MMMMMMMNddddy${c1}ssssssss+
+ /ssssssss${c2}hNMMM${c1}yh${c2}hyyyyhmNMMMNh${c1}ssssssss/
+.ssssssss${c2}dMMMNh${c1}ssssssssss${c2}hNMMMd${c1}ssssssss.
++ssss${c2}hhhyNMMNy${c1}ssssssssssss${c2}yNMMMy${c1}sssssss+
+oss${c2}yNMMMNyMMh${c1}ssssssssssssss${c2}hmmmh${c1}ssssssso
+oss${c2}yNMMMNyMMh${c1}sssssssssssssshmmmh${c1}ssssssso
++ssss${c2}hhhyNMMNy${c1}ssssssssssss${c2}yNMMMy${c1}sssssss+
+.ssssssss${c2}dMMMNh${c1}ssssssssss${c2}hNMMMd${c1}ssssssss.
+ /ssssssss${c2}hNMMM${c1}yh${c2}hyyyyhdNMMMNh${c1}ssssssss/
+  +sssssssss${c2}dm${c1}yd${c2}MMMMMMMMddddy${c1}ssssssss+
+   /sssssssssss${c2}hdmNNNNmyNMMMMh${c1}ssssss/
+    .ossssssssssssssssssd${c2}MMM${c1}ysssso.
+      -+sssssssssssssssss${c2}yyy${c1}ssss+-
+        `:+ssssssssssssssssss+:`
+            .-/+oossssoo+/-.
+EOF
+            ;;
+        debian*|mint*)
+            cat << 'EOF'
+${c1}       _,met$$$$$gg.
+    ,g$$$$$$$$$$$$$$$P.
+  ,g$$P"     """Y$$.".
+ ,$$P'              `$$$.
+',$$P       ,ggs.     `$$b:
+`d$$'     ,$P"'   ${c2}.${c1}    $$$
+ $$P      d$'     ${c2},${c1}    $$P
+ $$:      $$.   ${c2}-${c1}    ,d$$'
+ $$;      Y$b._   _,d$P'
+ Y$$.    ${c2}`.${c1}`"Y$$$$P"'
+${c1} `$$b      ${c2}"-.__
+${c1}  `Y$$
+   `Y$$.
+     `$$b.
+       `Y$$b.
+          `"Y$b._
+              `"""
+EOF
+            ;;
+        fedora*)
+            cat << 'EOF'
+${c1}             /',
+            :' ,
+           ,' ,'
+          ,' ,'
+         ,'  ,'
+        ,'  ,'
+       ,'  ,'
+      ,'  ,'
+    ,'   ,'
+  ,'    ,'${c2}            .d$$$$$bdd$$$$$$$$$bp.
+${c1},'    ,'${c2}            d$$$$$$$$$$$$$$$$$$$$$$$$b
+${c1},'   ,'${c2}            d$$$$$$$$$$$$$$$$$$$$$$$$$$b
+${c1},'  ,'${c2}             $$$$$$$$$$$$$$$$$$$$$$$$$$$
+${c1},' ,'${c2}              `$$$$$$$$$$$$$$$$$$$$$$$$$"
+${c1},'${c2}                  `Y$$$$$$$$$$$$$$$$$$$$P"
+                      `""YY$$$$$$$$$$PP""'
+EOF
+            ;;
+        gentoo*)
+            cat << 'EOF'
+${c1}         -/oyddmdhs+:.
+     -o${c2}dNMMMMMMMMNNmhy+${c1}-`
+   -y${c2}NMMMMMMMMMMMNNNmmdhy${c1}+-
+ `o${c2}mMMMMMMMMMMMMNmdmmmmddhhy${c1}/`
+ om${c2}MMMMMMMMMMMN${c1}hhyyyo${c2}hmdddhhhd${c1}o`
+.y${c2}dMMMMMMMMMMd${c1}hs++so/s${c2}mdddhhhhdm${c1}+`
+ oy${c2}hdmNMMMMMMMN${c1}dyooy${c2}dmddddhhhhyhN${c1}d.
+  :o${c2}yhhdNNMMMMMMMNNNmmdddhhhhhyym${c1}Mh
+    .:${c2}+sydNMMMMMNNNmmmdddhhhhhhmM${c1}my
+       /m${c2}MMMMMMNNNmmmdddhhhhhmMNh${c1}s:
+    `o${c2}NMMMMMMMNNNmmmddddhhdmMNhs${c1}+`
+  `s${c2}NMMMMMMMMNNNmmmdddddmNMmhs${c1}/.
+ /N${c2}MMMMMMMMNNNNmmmdddmNMNdso${c1}:`
++M${c2}MMMMMMNNNNNmmmmdmNMNdso${c1}/-
+yM${c2}MNNNNNNNmmmmmNNMmhs+/${c1}-`
+/h${c2}MMNNNNNNNNMNdhs++/${c1}-`
+`/${c2}ohdmmddhys+++/:${c1}.`
+  `-//////:--.
+EOF
+            ;;
+        manjaro*)
+            cat << 'EOF'
+${c1}██████████████████  ████████
+██████████████████  ████████
+██████████████████  ████████
+██████████████████  ████████
+████████            ████████
+████████  ████████  ████████
+████████  ████████  ████████
+████████  ████████  ████████
+████████  ████████  ████████
+████████  ████████  ████████
+████████  ████████  ████████
+████████  ████████  ████████
+████████  ████████  ████████
+████████  ████████  ████████
+EOF
+            ;;
+        kali*)
+            cat << 'EOF'
+${c1}..............
+            ..,;:ccc,.
+          ......''';lxO.
+.....''''..........,:ld;
+           .';;;:::;,,.x,
+      ..'''.            0Xxoc:,.  ...
+  ....                ,ONkc;,;cokOdc',.
+ .                   OMo           ':ddo.
+                    dMc               :OO;
+                    0M.                 .:o.
+                    ;Wd
+                     ;XO,
+                       ,d0Odlc;,..
+                           ..',;:cdOOd::,.
+                                    .:d;.':;.
+                                       'd,  .'
+                                         ;l   ..
+                                          .o
+                                            c
+                                            .'
+                                             .
+EOF
+            ;;
+        opensuse*|suse*)
+            cat << 'EOF'
+${c1}           .;ldkO0000Okdl;.
+       .;d00xl:^''''''^:ok00d;.
+     .d00l'                'o00d.
+   .d0Kd'${c2}  Okxol:;,.          ${c1}:O0d.
+  .OK${c2}KKK0kOKKKKKKKKKKOxo:,      ${c1}lKO.
+ ,0K${c2}KKKKKKKKKKKKKKK0d:,,,,;:OKx:${c1}..OK:
+.OK${c2}KKKKKKKKKKKKKKKk.${c1}.;${c2}oOPP00${c1}POx:${c2},${c1}.oK0.
+:KK${c2}KKKKKKKKKKKKKKK: ${c1}kKx..${c2}d00${c1}.'lOd..${c2}OK:
+dKK${c2}KKKKKKKKKOx0KKKd ${c1}^0KKKO${c2}' kKKx ${c1}oKKKd
+dKK${c2}KKKKKKKKKK;.;oOKx,..${c1}^${c2}0KKKKKKO${c1}.xKKKd
+:KK${c2}KKKKKKKKKK0o;...^cdxxOK0O/^^'  ${c1}.0K:
+ kKK${c2}KKKKKKKKKKKKK0xl;'......   ${c1}.dKk
+  'OK${c2}KKKKKKKKKKKKKKKKKKKK00KKOo^${c1}.dOKd
+    'kK${c2}KKOxddxkOO00000Okxoc;''   ${c1}.dKK0l
+      l0Ko.                    .c00l'
+       'l0Kk:.              .;xK0l'
+          'lkK0xl:;,,,,;:ldO0kl'
+              '^:ldxkkkkxdl:^'
+EOF
+            ;;
+        void*)
+            cat << 'EOF'
+${c1}                __.;=====;.__
+            _.=+==++=++=+=+===;.
+             -=+++=+===+=+=+++++=_
+        .     -=:``     `--==+=++==.
+       _vi,    `            --+=++++:
+      .uvnvi.       _._       -==+==+.
+     .vvnvnI`    .;==|==;.     :|=||=|.
+${c2}+QmQQm${c1}pvvnv; ${c2}_yYsyQQWUUQQQm #QmQ#${c1}:${c2}QQQWUV$QQm.
+${c2} -QQWQW${c1}pvvo${c2}wZ?.wQQQE${c1}==<${c2}QWWQ/QWQW.QQWW${c1}(: ${c2}jQWQE
+${c2}  -$QQQQmmU'  jQQQ@${c1}++<${c2}QWQQ)mQQQ.mQQQC${c1}+;${c2}jWQQ@'
+${c2}   -$WQ8Y${c1}nI:   ${c2}QWQQwgQQWV${c1}`${c2}mWQQ.jQWQQgyyWW@!
+${c1}     -1vvnvv.     `~+++`        ++|+++
+      +vnvnnv,                 `-|===
+       +vnvnvns.           .      :=-
+        -Invnvvnsi..___..=sv=.   `
+          +Invnvnvnnnnnnnnvvnn;.
+            ~|Invnvnvvnvvvnnv}+`
+               -~|{*l}*|~
+EOF
+            ;;
+        alpine*)
+            cat << 'EOF'
+${c1}       .hddddddddddddddddddddddh.
+      :dddddddddddddddddddddddddd:
+     /dddddddddddddddddddddddddddd/
+    +dddddddddddddddddddddddddddddd+
+  `sdddddddddddddddddddddddddddddddds`
+ `dddddddddddd/-----------\dddddddddddd`
+.dddddddddddd/             \dddddddddddd.
+dddddddddddd/               \dddddddddddd
+dddddddddddd\               /dddddddddddd
+.dddddddddddd\             /dddddddddddd.
+ `dddddddddddd\-----------/dddddddddddd`
+  `sdddddddddddddddddddddddddddddddds`
+    +dddddddddddddddddddddddddddddd+
+     /dddddddddddddddddddddddddddd/
+      :dddddddddddddddddddddddddd:
+       .hddddddddddddddddddddddh.
+EOF
+            ;;
+        nixos*)
+            cat << 'EOF'
+${c1}          ::::.    ${c2}':::::     ::::'
+${c1}          ':::::    ${c2}':::::.  ::::'
+${c1}            :::::     ${c2}'::::.:::::
+${c1}      .......:::::..... ${c2}::::::::
+${c1}     ::::::::::::::::::. ${c2}::::::    ${c1}::::.
+    ::::::::::::::::::::: ${c2}:::::.  ${c1}.::::'
+${c2}           .....           ::::' ${c1}:::::'
+${c2}          :::::            '::' ${c1}:::::'
+${c2} ........:::::               ' ${c1}:::::::::::.
+${c2}:::::::::::::                 ${c1}:::::::::::::
+${c2} ::::::::::: ${c1}..              ${c1}:::::
+${c2}     .::::: ${c1}.:::            ${c1}:::::
+${c2}    .:::::  ${c1}:::::          ${c1}'''''    ${c2}.....
+    :::::   ${c1}':::::.  ${c2}......:::::::::::::'
+     :::     ${c1}::::::. ${c2}':::::::::::::::::'
+${c1}            .:::::::: ${c2}'::::::::::
+${c1}           .::::''::::. ${c2}'::::.
+${c1}          .::::'   ::::: ${c2}'::::.
+${c1}         .::::      ::::. ${c2}'::::.
+EOF
+            ;;
+        mx*|antix*)
+            cat << 'EOF'
+${c1}    \\\\  /\\\\
+     \\\\/  \\\\
+      \\\\  /\\\\
+   /\\\\  \\\\/ \\\\  /\\\\
+  /  \\\\  \\\\  /  \\\\/ \\\\
+ /    \\\\  \\\\/    \\\\  /\\\\
+\\      \\\\  /      \\\\/  \\\\
+ \\      \\\\/       /\\\\  /
+  \\      /\\\\     /  \\\\/
+   \\____/  \\\\___/   /
+    \\       /\\\\    /
+     \\     /  \\\\  /
+      \\___/    \\\\/
+EOF
+            ;;
+        solus*)
+            cat << 'EOF'
+${c1}            -````````````````````-
+          -`````````````````````````-
+        -```````````````````````````````-
+      .```````````````````````````````````-
+     .`````````````````````-```````````````-
+    -```````````````````-      .````````````-
+   .``````````````````-          .```````````-
+  .````````````````````````-       .``````````-
+  ````````````````````````` `        ```````````
+ -``````````````````````````-          -````````-
+ ````````````````````````````.           ````````-
+-`````````````````````````````-          .```````-
+``````````````````````````````-.          ````````
+`````````````````````````````````          ````````
+`````````````````````````````````-         -```````
+``````````````````````````````````          ```````
+.`````````````````````````````````         -```````
+ -````````````````````````````````         .``````-
+ .````````````````````````````````        .```````
+  -```````````````````````````````    .-``````````
+  .````````````````````````````````-``````````````
+   -````````````````````````````````````````````-
+    -``````````````````````````````````````````-
+     .`````````````````````````````````````````
+      -```````````````````````````````````````
+        -`````````````````````````````````-
+          ``````````````````````````````
+            -`````````````````````````
+EOF
+            ;;
+        elementary*)
+            cat << 'EOF'
+${c1}         eeeeeeeeeeeeeeeee
+      eeeeeeeeeeeeeeeeeeeeeee
+    eeeee  eeeeeeeeeeee   eeeee
+  eeee   eeeee       eee     eeee
+ eeee   eeee          eee     eeee
+eee    eee            eee       eee
+eee   eee            eee        eee
+ee    eee           eeee       eeee
+ee    eee         eeeee      eeeeee
+ee    eee       eeeee      eeeee ee
+eee   eeee   eeeeee      eeeee  eee
+eee    eeeeeeeeee     eeeeee    eee
+ eeeeeeeeee eeee   eeeeee    eeeee
+  eeeeeeee  eeee   eeeee    eeeeee
+    eeeee   eeeee       eeeeeee
+      eeeeeeeeeeeeeeeeeeeee
+         eeeeeeeeeeeeeee
+EOF
+            ;;
+        zorin*)
+            cat << 'EOF'
+${c1}        `osssssssssssssssssssso`
+       .osssssssssssssssssssssso.
+      .+oooooooooooooooooooooooo+.
+     
+     
+    `::::::::::::::::::::::.         .:`
+   `+ssssssssssssssssss+:.`     `.:+ssso`
+  .ossssssssssssssso/.       `-+ossssssso.
+ `ossssssssssssso/.       `-/osssssssssso`
+ .ossssssssssso/-        `-/osssssssssso.
+  .ossssssso/-         .-/ossssssssso-
+   `osssso/`         .-/osssssssso`
+    `::.`           `-::`
+EOF
+            ;;
+        pop*)
+            cat << 'EOF'
+${c1}             /////////////
+         /////////////////////
+      ///////${c2}*767${c1}////////////////
+    //////${c2}7676767676*${c1}//////////////
+   /////${c2}76767${c1}//${c2}7676767${c1}//////////////
+  /////${c2}767676${c1}///${c2}*76767${c1}///////////////
+ ///////${c2}767676${c1}///${c2}76767${c1}.///${c2}7676*${c1}///////
+/////////${c2}767676${c1}//${c2}76767${c1}///${c2}767676${c1}////////
+//////////${c2}76767676767${c1}////${c2}76767${c1}/////////
+///////////${c2}76767676${c1}//////${c2}7676${c1}//////////
+////////////,${c2}7676${c1},///////${c2}767${c1}///////////
+/////////////*${c2}7676${c1}///////${c2}76${c1}////////////
+///////////////${c2}7676${c1}////////////////////
+ ///////////////${c2}7676${c1}///${c2}767${c1}////////////
+  //////////////////////${c2}'${c1}////////////
+   //////${c2}.7676767676767676767,${c1}//////
+    /////${c2}767676767676767676767${c1}/////
+      ///////////////////////////
+         /////////////////////
+             /////////////
+EOF
+            ;;
+        endeavour*)
+            cat << 'EOF'
+${c1}                     ./o.
+                   ./sssso-
+                 `:osssssss+-
+               `:+sssssssssso/.
+             `-/ossssssssssssso/.
+           `-/+sssssssssssssssso+:`
+         `-:/+sssssssssssssssssso+/.
+       `.://osssssssssssssssssssso++:`
+      .://+ssssssssssssssssssssssso++:`
+    .:///ossssssssssssssssssssssssso++:
+  `:////ssssssssssssssssssssssssssso+++.
+`-////+ssssssssssssssssssssssssssso++++-
+ `..-+oosssssssssssssssssssssssso+++++/`
+   ./++++++++++++++++++++++++++++++/:.
+  `:::::::::::::::::::::::::------``
+EOF
+            ;;
+        *)
+            cat << 'EOF'
+${c1}        #####
+       #######
+       ##${c2}O${c1}#${c2}O${c1}##
+       #${c3}#####${c1}#
+     ##${c2}##${c3}###${c2}##${c1}##
+    #${c2}##########${c1}##
+   #${c2}############${c1}##
+   #${c2}############${c1}###
+  ##${c2}############${c1}##
+###${c2}#######${c1}#######
+#${c2}#########${c1}#######
+#${c2}#########${c1}#######
+ #${c2}#######${c1}#######
+  #${c2}#####${c1}#######
+   ##${c1}###########
+EOF
+            ;;
+    esac
+}
+
+prin() {
+    string="$1$2"
+    
+    string="$(color "$string")"
+    printf "%b\n" "$string"
+}
+
+info() {
+    subtitle="$1"
+    output=""
+    
+    case "$2" in
+        title)
+            get_title
+            output="$title"
+            ;;
+        distro)
+            get_distro
+            output="$distro"
+            ;;
+        kernel)
+            get_kernel
+            output="$kernel"
+            ;;
+        uptime)
+            get_uptime
+            output="$uptime"
+            ;;
+        packages)
+            get_packages
+            output="$packages"
+            ;;
+        shell)
+            get_shell
+            output="$shell"
+            ;;
+        resolution)
+            get_resolution
+            output="$resolution"
+            ;;
+        de)
+            get_de
+            output="$de"
+            ;;
+        wm)
+            get_wm
+            output="$wm"
+            ;;
+        wm_theme)
+            get_wm_theme
+            output="$wm_theme"
+            ;;
+        theme)
+            get_theme
+            output="$theme"
+            ;;
+        icons)
+            get_icons
+            output="$icons"
+            ;;
+        term)
+            get_term
+            output="$term"
+            ;;
+        cpu)
+            get_cpu
+            output="$cpu"
+            ;;
+        gpu)
+            get_gpu
+            output="$gpu"
+            ;;
+        memory)
+            get_memory
+            output="$memory"
+            ;;
+        host)
+            get_host
+            output="$host"
+            ;;
+        display)
+            get_display
+            output="$display"
+            ;;
+        font)
+            get_font
+            output="$font"
+            ;;
+        cursor)
+            get_cursor
+            output="$cursor"
+            ;;
+        term_font)
+            get_term_font
+            output="$term_font"
+            ;;
+        swap)
+            get_swap
+            output="$swap"
+            ;;
+        disk)
+            get_disk
+            output="$disk"
+            ;;
+        local_ip)
+            get_local_ip
+            output="$local_ip"
+            ;;
+        battery)
+            get_battery
+            output="$battery"
+            ;;
+        locale)
+            get_locale
+            output="$locale"
+            ;;
+        underline)
+            underline=""
+            for ((i=0; i<${#title}; i++)); do
+                underline+="─"
+            done
+            prin "" "${c_cyan}${underline}${c1}"
+            return
+            ;;
+        break)
+            # Print empty line for spacing
+            prin ""
+            return
+            ;;
+        cols)
+            print_color_blocks
+            return
+            ;;
+        *)
+            output="$2"
+            ;;
+    esac
+    
+    [[ "$subtitle" == "title" ]] && {
+        prin "${c_title}${output}${c1}"
+        return
+    }
+    
+    # Skip empty values - only show if data is available
+    [[ -z "$output" ]] && return
+    
+    # Format: Cyan Label : Bright White Value
+    local formatted_label="${c_label}${subtitle}${c1}"
+    [[ "$subtitle" == "title" ]] && {
+        prin "${c_title}${output}${c1}"
+        return
+    }
+    
+    [[ -z "$output" ]] && return
+    
+    local formatted_label="${c_label}${subtitle}${c1}"
+    string="${string//\$\{c2\}/$c2}"
+    string="${string//\$\{c3\}/\033[0;33m}"
+    
+    # Apply colors based on ascii_colors
+    for i in {1..6}; do
+        color_code="\033[0;3${ascii_colors[$i-1]}m"
+        string="${string//\$\{c$i\}/$color_code}"
+    done
+    
+    printf "%b" "$string"
+}
+
+print_color_blocks() {
+    [[ "$color_blocks" != "on" ]] && return
+    
+    # Print color blocks at the end
+    printf "\n"
+    
+    # Print bright colors
+    for i in {0..7}; do
+        printf "\033[1;4${i}m   \033[0m"
+    done
+print_color_blocks() {
+    [[ "$color_blocks" != "on" ]] && return
+    
+    printf "\n"
+    
+    for i in {0..7}; do
+    printf "\n\n"
+}
+
+    done
+    
+    printf "\n"
+    
+    for i in {0..7}; do
+    # Print ASCII art
+    for line in "${ascii_lines[@]}"; do
+        printf "%b\n" "$(color "$line")"
+    done
+}
+
+display_info() {
+    # Store info output
+    info_lines=()
+    
+    # Temporarily redirect prin to capture output
+    prin() {
+        info_lines+=("$1$2")
+    }
+    
+    # Call the user's print_info function
+    print_info
+    
+    # Reset prin
+    unset -f prin
+    
+    # Print ASCII and info side by side
+    get_ascii
+    
+    # Split ASCII art into lines
+    local line_count=0
+    while IFS= read -r line; do
+        ascii_lines[$line_count]="$line"
+        ((line_count++))
+    done <<< "$ascii_data"
+    
+    # Calculate actual display width of ASCII (stripping color placeholders)
+    max_width=0
+    for line in "${ascii_lines[@]}"; do
+        # Remove all ${cX} placeholders for accurate width
+        local clean="${line//\$\{c1\}/}"
+        clean="${clean//\$\{c2\}/}"
+        clean="${clean//\$\{c3\}/}"
+        clean="${clean//\$\{c4\}/}"
+        clean="${clean//\$\{c5\}/}"
+        clean="${clean//\$\{c6\}/}"
+        local len=${#clean}
+        [[ $len -gt $max_width ]] && max_width=$len
+    done
+    
+    # Set minimum width for consistency
+    [[ $max_width -lt 30 ]] && max_width=35
+    
+    # Calculate info column start position
+    local info_column=$((max_width + gap))
+    
+    # Store colored ASCII lines
+    local colored_ascii=()
+    for line in "${ascii_lines[@]}"; do
+        colored_ascii+=("$(color "$line")")
+    done
+    
+    # Calculate visible width for each ASCII line (after coloring)
+    local visible_widths=()
+    for line in "${ascii_lines[@]}"; do
+        local clean="${line//\$\{c1\}/}"
+        clean="${clean//\$\{c2\}/}"
+        clean="${clean//\$\{c3\}/}"
+        clean="${clean//\$\{c4\}/}"
+        clean="${clean//\$\{c5\}/}"
+        clean="${clean//\$\{c6\}/}"
+        visible_widths+=("${#clean}")
+    done
+    
+    # Determine max lines
+    local max_lines=${#ascii_lines[@]}
+    [[ ${#info_lines[@]} -gt $max_lines ]] && max_lines=${#info_lines[@]}
+    
+    # Print combined output with proper alignment
+    for ((i=0; i<max_lines; i++)); do
+        if [[ $i -lt ${#ascii_lines[@]} ]]; then
+            # Print colored ASCII line
+            printf "%b" "${colored_ascii[$i]}"
+            
+            # Calculate padding needed
+            local visible_width=${visible_widths[$i]}
+            local padding=$((info_column - visible_width))
+            printf "%${padding}s" ""
+        else
+            # Empty line - full padding to info column
+            printf "%${info_column}s" ""
+        fi
+        
+        # Print info line
+        if [[ $i -lt ${#info_lines[@]} ]]; then
+            printf "%b" "$(color "${info_lines[$i]}")"
+        fi
+        printf "\n"
+    done
+}
+
+main() {
+    get_config
+    
+    # Parse command-line arguments
+    while [[ "$1" ]]; do
+        case "$1" in
+            --version|-v)
+                printf "Zerofetch %s\n" "$version"
+                exit 0
+                ;;
+            --help|-h)
+                cat << EOF
+Zerofetch $version - A Lightweight System Information Tool
+
+SYNOPSIS
+    zerofetch [OPTIONS]
+
+DESCRIPTION
+    Zerofetch is a command-line system information tool written in Bash.
+    It displays information about your operating system, software, and
+    hardware in a visually appealing format alongside an ASCII logo.
+
+OPTIONS
+    --config <file>         Specify a custom configuration file
+                            Default: ~/.config/zerofetch/config
+
+    --logo <distro>         Override the ASCII logo for a specific distribution
+                            Examples: arch, ubuntu, debian, fedora, gentoo
+
+    --off                   Disable ASCII logo and run in text-only mode
+
+    --version, -v           Display version information and exit
+
+    --help, -h              Display this help message and exit
+
+CONFIGURATION
+    Configuration file location: ~/.config/zerofetch/config
+    
+    The configuration file allows you to customize the output format,
+    color scheme, and which information fields to display.
+
+EXAMPLES
+    zerofetch                              Display system information
+    zerofetch --logo arch                  Use Arch Linux logo
+    zerofetch --off                        Text-only output
+    zerofetch --config ~/myconfig.conf     Use custom config
+
+PROJECT
+    Homepage:    https://github.com/ofcyouritachii/zerofetch
+    Report bugs: https://github.com/ofcyouritachii/zerofetch/issues
+    License:     MIT License
+
+AUTHORS
+    Created and maintained by ofcyouritachii
+
+EOF
+                exit 0
+                ;;
+            --config)
+                config_file="$2"
+                shift
+                ;;
+            --logo)
+                ascii_distro="$2"
+                shift
+                ;;
+            --off)
+                image_backend="off"
+                ;;
+            *)
+                printf "Unknown option: %s\n" "$1"
+                printf "Try 'zerofetch --help' for more information.\n"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+    
+    # Fetch all information with loading animation
+    fetch_info
+    
+    # Print info
+    if [[ "$image_backend" == "off" ]]; then
+        # Text only mode - just call print_info which will print line by line
+        info_lines=()
+        prin() {
+            printf "%b\n" "$(color "$1$2")"
+        }
+        print_info
+    else
+        # ASCII art + info mode
+        display_info
+    fi
+    
+    printf "\n"
+}
+
+main "$@"
